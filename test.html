@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Script-Type" content="text/javascript" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<title>test</title>
+<link rel="stylesheet" href="./jquery-ui.min.css" />
+<link rel="stylesheet" href="./jquery-ui.structure.min.css" />
+<link rel="stylesheet" href="./jquery-ui.theme.min.css" />
+<script type="text/javascript" src="./jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="./jquery-ui.min.js"></script>
+<script type="text/javascript" src="./jquery.simple_choices.js"></script>
+<script type="text/javascript" src="./jquery.simple_csv.js"></script>
+<script type="text/javascript" src="./jquery.simple_dateformat.js"></script>
+<script type="text/javascript" src="./jquery.simple_table.js"></script>
+<script type="text/javascript" src="./jquery.simple_timetable.js"></script>
+<script type="text/javascript">
+$(function() {
+
+	$(document.body).css({ "width":"5000px" });
+
+	var currentDate = new Date();
+
+	// generate start-date(first half) component.
+	$("#text_id_start-date").datepicker(
+		{
+			"dateFormat" : "yy/mm/dd",
+			"onClose" : function() { $("#select_id_start-date-hour").focus(); }
+		}
+	).datepicker("setDate", $.simple_dateformat(currentDate, "yyyy/MM/dd"));
+
+	// generate start-date(second half) component.
+	var choices_hour   = {};
+	var choices_minute = {};
+	var choices_second = {};
+	for (var i = 0; i <= 23; i++) {
+		var _i = padding(2, String(i));
+		choices_hour[i] = _i;
+	}
+	for (var i = 0; i <= 59; i++) {
+		var _i = padding(2, String(i));
+		choices_minute[i] = _i;
+		choices_second[i] = _i;
+	}
+	$("#area_id_start-date-hour").simple_choices({
+		"control-type":"select", 
+		"control-id":"select_id_start-date-hour",		// <select /> : id="{control-id}", name="{control-id}"; <option /> : id="{control-id}-{choices.key}", value="{choices.key}"
+		"choices":choices_hour, 
+		"value":["0"] 
+	});
+	$("#area_id_start-date-minute").simple_choices({
+		"control-type":"select", 
+		"control-id":"select_id_start-date-minute",		// <select /> : id="{control-id}", name="{control-id}"; <option /> : id="{control-id}-{choices.key}", value="{choices.key}"
+		"choices":choices_minute, 
+		"value":["0"] 
+	});
+	$("#area_id_start-date-second").simple_choices({
+		"control-type":"select", 
+		"control-id":"select_id_start-date-second",		// <select /> : id="{control-id}", name="{control-id}"; <option /> : id="{control-id}-{choices.key}", value="{choices.key}"
+		"choices":choices_second, 
+		"value":["0"] 
+	});
+
+	// generate interval component.
+	var choices_interval = {};
+    $.get('./test.csv', 
+        function(text_data) {
+            var csv_data = $.simple_csv(text_data);
+            $(csv_data).each(
+                function() {
+                	choices_interval[this[0]] = this[1];
+                }
+            );
+			$("#area_id_interval").simple_choices({
+				"control-type":"select", 
+				"control-id":"select_id_interval",		// <select /> : id="{control-id}", name="{control-id}"; <option /> : id="{control-id}-{choices.key}", value="{choices.key}"
+				"choices":choices_interval, 
+				"value":["d"] 
+			});
+			$("#button_id_view").click(
+				function() {
+					var startDateText = [];
+					startDateText.push($("#text_id_start-date").val().split("/").join(""));
+					startDateText.push(padding(2, $("#select_id_start-date-hour").val()));
+					startDateText.push(padding(2, $("#select_id_start-date-minute").val()));
+					startDateText.push(padding(2, $("#select_id_start-date-second").val()));
+					view($("#select_id_interval").children(':selected').val(), $.simple_dateparse(startDateText.join(""), "yyyyMMddHHmmssSSS"));
+				}
+			);
+			$("#button_id_view").trigger("click");
+        }
+    );
+});
+function padding(digit, org) { 
+	while (org.length < digit) {
+		org = "0" + org;
+	}
+	return org;
+}
+function view(interval, startDate) {
+
+	// make row_headers.
+	var row_headers = [];
+	for (var i = 0; i < 10; i++) {
+		row_headers.push("record(" + (i + 1) + ")");
+	}
+
+	// make test data.
+	// ----------
+	var layer_1 = []; // low priority
+	var layer_2 = []; // high priority
+	for (var i = 0; i < 12; i++) {
+		var tmp = [];
+		var layer = (i < 6) ? "1" : "2";
+		for (var ii = 0; ii < 10; ii++) {
+			var correction = (i < 6) ? ii : (ii + 9);
+			var tmp_start_date = new Date();
+			var tmp_end_date   = new Date(tmp_start_date.getTime());
+			if (i % 6 == 0) {
+				tmp_start_date = resetTime(tmp_start_date, "yyyy", "0101000000000");
+				tmp_end_date   = resetTime(tmp_end_date,   "yyyy", "0101000000000");
+				tmp_start_date.setFullYear(tmp_start_date.getFullYear() + (correction));
+				tmp_end_date.setFullYear(tmp_end_date.getFullYear() + (correction + 1));
+			} else if (i % 6 == 1) {
+				tmp_start_date = resetTime(tmp_start_date, "yyyyMM", "01000000000");
+				tmp_end_date   = resetTime(tmp_end_date,   "yyyyMM", "01000000000");
+				tmp_start_date.setMonth(tmp_start_date.getMonth() + (correction));
+				tmp_end_date.setMonth(tmp_end_date.getMonth() + (correction + 1));
+			} else if (i % 6 == 2) {
+				tmp_start_date = resetTime(tmp_start_date, "yyyyMMdd", "000000000");
+				tmp_end_date   = resetTime(tmp_end_date,   "yyyyMMdd", "000000000");
+				tmp_start_date.setDate(tmp_start_date.getDate() + (correction));
+				tmp_end_date.setDate(tmp_end_date.getDate() + (correction + 1));
+			} else if (i % 6 == 3) {
+				tmp_start_date = resetTime(tmp_start_date, "yyyyMMddHH", "0000000");
+				tmp_end_date   = resetTime(tmp_end_date,   "yyyyMMddHH", "0000000");
+				tmp_start_date.setHours(tmp_start_date.getHours() + (correction));
+				tmp_end_date.setHours(tmp_end_date.getHours() + (correction + 1));
+			} else if (i % 6 == 4) {
+				tmp_start_date = resetTime(tmp_start_date, "yyyyMMddHHmm", "00000");
+				tmp_end_date   = resetTime(tmp_end_date,   "yyyyMMddHHmm", "00000");
+				tmp_start_date.setMinutes(tmp_start_date.getMinutes() + (correction));
+				tmp_end_date.setMinutes(tmp_end_date.getMinutes() + (correction + 1));
+			} else if (i % 6 == 5) {
+				tmp_start_date = resetTime(tmp_start_date, "yyyyMMddHHmmss", "000");
+				tmp_end_date   = resetTime(tmp_end_date,   "yyyyMMddHHmmss", "000");
+				tmp_start_date.setSeconds(tmp_start_date.getSeconds() + (correction));
+				tmp_end_date.setSeconds(tmp_end_date.getSeconds() + (correction + 1));
+			}
+			
+			tmp.push(
+				{
+					"id"        :"data_" + layer + "_" + ((i % 6) + 1) + "_" + (ii + 1),
+					"title"     :"data_" + layer + "_" + ((i % 6) + 1) + "_" + (ii + 1) + "(" + $.simple_dateformat(tmp_start_date, "yyyy/MM/dd HH:mm:ss") + " - " + $.simple_dateformat(tmp_end_date, "yyyy/MM/dd HH:mm:ss") + ")",
+					"start-date":tmp_start_date,
+					"end-date"  :tmp_end_date
+				}
+			);
+		}
+		if (i < 6) {
+			layer_1.push(tmp);
+		} else {
+			layer_2.push(tmp);
+		}
+	}
+	// ----------
+	for (var i = 0; i < layer_1.length; i++) { // row
+		for (var ii = 0; ii < layer_1[i].length; ii++) { // data
+			layer_1[i][ii]["color"] = "#000000";
+			layer_1[i][ii]["background-color"] = "#F0FFF0";
+			layer_1[i][ii]["border-color"] = "#008000";
+			layer_1[i][ii]["box-shadow"] = "1px 1px 1px 1px rgba(0, 0, 0, 0.1)";
+		}
+	}
+	for (var i = 0; i < layer_2.length; i++) { // row
+		for (var ii = 0; ii < layer_2[i].length; ii++) { // data
+			layer_2[i][ii]["color"] = "#000000";
+			layer_2[i][ii]["background-color"] = "#FFFFF0";
+			layer_2[i][ii]["border-color"] = "#FFFF00";
+			layer_2[i][ii]["box-shadow"] = "1px 1px 1px 1px rgba(0, 0, 0, 0.1)";
+		}
+	}
+	var data = [];
+	data.push(layer_1);
+	data.push(layer_2);
+
+	// generate timetable.
+	var cells_id_prefix = "1_c_id_";
+	$("#timetable_id_1").css({ "position":"relative" }); // required.
+	$("#timetable_id_1").simple_timetable({
+		//"cols":Unusable, 
+		//"col-headers":Unusable, 
+		"col-headers-id-prefix":"1_ch_id_",		// id="1_ch_id_{col number(1～)}"
+		"col-headers-text-align":"center", 
+		"col-headers-color":"#FFFFFF", 
+		"col-headers-background-color":"#B0C4DE", 
+		"rows":String(row_headers.length), 
+		"row-headers":row_headers, 
+		"row-headers-id-prefix":"1_rh_id_",		// id="1_rh_id_{row number(1～)}"
+		"row-headers-text-align":"center", 
+		"row-headers-color":"#FFFFFF", 
+		"row-headers-background-color":"#D8BFD8", 
+		"top-left-header":"", //
+		"top-left-header-id":"1_tlh_id",		// id="1_tlh_id"
+		"top-left-header-text-align":"center", 
+		"top-left-header-color":"#FFFFFF", 
+		"top-left-header-background-color":"#A9A9A9", 
+		"cell-data":[], //
+		"cells-id-prefix":cells_id_prefix,		// id="1_c_id_{col number(1～)}-{row number(1～)}"
+		"cells-text-align":"left", 
+		"cells-color":"#000000", 
+		"cells-background-color":"#FFFFFF", 
+		"ruled-line-border-color":"#000000", 
+		//"ruled-line-border-style":Unusable, 
+		//"ruled-line-border-width":Unusable, 
+		"ruled-line-width":"125px", 			// "px" only.
+		"ruled-line-height":"25px", 			// "px" only.
+		// -----
+		"row-headers-override-width":"150px",	// "px" only.
+		"col-headers-override-height":"50px",	// "px" only.
+		"start-date":startDate, 
+		//"end-date":Use the default value, 
+		"interval":interval, // y/M/d/H/m/s
+		//"col-headers-format":Use the default value, 
+		"data":data
+	});
+
+	// handling event for space.
+	var row = 1;
+	var col = 1;
+	while ($("#" + cells_id_prefix + "1" + "-" + String(row)).size() != 0) {
+		col = 1;
+		while ($("#" + cells_id_prefix + String(col) + "-" + String(row)).size() != 0) {
+			$("#" + cells_id_prefix + String(col) + "-" + String(row)).click( function() { alert("space[" + this.id + "]"); } );
+			$("#" + cells_id_prefix + String(col) + "-" + String(row)).css( { "cursor":"pointer" } );
+			col++;
+		}
+		row++;
+	}
+	// handling event for layer_1.
+	for (var i = 0; i < layer_1.length; i++) { // row
+		for (var ii = 0; ii < layer_1[i].length; ii++) { // data
+			$("#" + layer_1[i][ii]["id"]).click( function() { alert("green[" + this.id + "]"); } );
+			$("#" + layer_1[i][ii]["id"]).css( { "cursor":"pointer" } );
+		}
+	}
+	// handling event for layer_2.
+	for (var i = 0; i < layer_2.length; i++) { // row
+		for (var ii = 0; ii < layer_2[i].length; ii++) { // data
+			$("#" + layer_2[i][ii]["id"]).click( function() { alert("yellow[" + this.id + "]"); } );
+			$("#" + layer_2[i][ii]["id"]).css( { "cursor":"pointer" } );
+		}
+	}
+};
+function resetTime(date, leave_format, reset_time) {
+	return $.simple_dateparse($.simple_dateformat(date, leave_format) + reset_time, "yyyyMMddHHmmssSSS");
+};
+</script>
+</head>
+<body>
+<br /><br />
+<div id="column_id_1" style="float:left;padding:10px;">
+<h2>timetable</h2>
+<br />
+</div>
+<div id="column_id_2" style="float:left;padding:10px;border:#000000 solid 1px">
+start-date : <input type="text" id="text_id_start-date" maxlength="10" style="width:100px" readonly="readonly">&nbsp;<span id="area_id_start-date-hour"></span>:<span id="area_id_start-date-minute"></span>:<span id="area_id_start-date-second"></span><br />
+interval : <span id="area_id_interval"></span><br />
+<input type="button" id="button_id_view" value="view" /><br />
+<br />
+<div id="timetable_id_1"></div><br />
+</div>
+</body>
+</html>
