@@ -1,12 +1,12 @@
 /*!
- * jQuery SimpleChoices Plugin v1.0.1
+ * jQuery SimpleChoices Plugin v1.0.2
  * https://github.com/criticalbreak5/simple_choices
  *
  * Copyright 2014 criticalbreak5's
  * Released under the MIT license
  * http://opensource.org/licenses/mit-license.php
  *
- * Date: 2014-07-16T00:00Z
+ * Date: 2014-11-10T00:00Z
  */
 (
 	function($) {
@@ -58,6 +58,7 @@
 					}
 					html.push(">" + choices[choice] + "</option>");
 				}
+				html.push("</select>");
 				$(target).html(html.join(""));
 			};
 			function generateCheckboxOrRadio(isCheckbox, target, checkboxOrRadioId, choices, value, isReadOnly) {
